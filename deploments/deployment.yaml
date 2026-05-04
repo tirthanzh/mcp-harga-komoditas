@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: smart-crawler
+    kind: mcp-harga-komoditas-dan-ketahanan-pangan
+  name: mcp-harga-komoditas-dan-ketahanan-pangan
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smart-crawler
+      kind: mcp-harga-komoditas-dan-ketahanan-pangan
+  template:
+    metadata:
+      labels:
+        app: smart-crawler
+        kind: mcp-harga-komoditas-dan-ketahanan-pangan
+    spec:
+      containers:
+        - image: registry.blackeye.id/crawler/api/mcp-harga-komoditas-dan-ketahanan-pangan:1.0.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            successThreshold: 1
+            tcpSocket:
+              port: 5200
+            timeoutSeconds: 5
+          name: mcp-harga-komoditas-dan-ketahanan-pangan
+          ports:
+            - containerPort: 5200
+              name: api
+              protocol: TCP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 20
