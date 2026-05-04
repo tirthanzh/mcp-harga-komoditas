@@ -42,7 +42,7 @@ class BaseService:
     
     async def start(self):
         from httpx import AsyncClient
-        self.client = AsyncClient(headers=self.client_headers, cookies=self.client_cookies, timeout=self.timeout)
+        self.client = AsyncClient(headers=self.client_headers, cookies=self.client_cookies, follow_redirects=True, max_redirects=10, timeout=self.timeout, trust_env=True, http1=True, http2=False, verify=False)
     
     async def client_get(self, url: str, params: dict[str, str] = {}) -> RawResponse:
         response = await self.client.get(url, params=params)

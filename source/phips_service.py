@@ -170,6 +170,7 @@ class PhipsService(BaseService):
     @logger.catch(onerror=lambda e: exec('raise e'))
     async def start(self):
         await gather(super().start(), self.init_sqlite())
+        await self.client_get("https://www.bi.go.id/")
         await gather(self.update_list_comodity_table(), self.update_list_location_table(), self.update_price_type_table())
 
     @logger.catch()

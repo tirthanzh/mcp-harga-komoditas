@@ -8,4 +8,6 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-ENTRYPOINT ["python", "main.py"]
+RUN chmod +x /app/runapp.sh
+
+ENTRYPOINT ["/app/runapp.sh"]

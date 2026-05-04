@@ -125,11 +125,10 @@ async def get_statistik_wilayah_ketahanan_pangan(location_keyword: str, year: in
 
 if __name__ == "__main__":
     from asyncio import run, ensure_future
-    from os import getenv
     async def main():
         try:
             ensure_future(schedule_task())
-            await mcp.run_async("http", host="0.0.0.0", port=int(getenv("PORT") | "5200"))
+            await mcp.run_async("http", host="0.0.0.0", port=5200)  
         except BaseException as e:
             logger.error(e)
         finally:
