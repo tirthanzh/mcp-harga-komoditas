@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timedelta
 from loguru import logger
 from asyncio import sleep
+import asyncio
 
 class BadanpanganService(BaseService):
     def __init__(self):
@@ -19,13 +20,21 @@ class BadanpanganService(BaseService):
         }, timeout=120)
         # self._cached_main_page: tuple[RawResponse, datetime] = None
     
-    async def fetch_main_page(self) -> RawResponse:
+    async def fetch_main_page(self) -> tuple[str, str]:
+        """Return (html, rand_link) dari halaman utama."""
         # if self._cached_main_page and (self._cached_main_page[1] + timedelta(hours=1)) > datetime.now():
         #     return self._cached_main_page[0]
         # self._cached_main_page = (await self.client_get(BASE_URL), datetime.now())
         # await sleep(0.5)
         # return self._cached_main_page[0]
-        return await self.client_get(BASE_URL)
+        response = await self.client_get(BASE_URL)
+        html = response.text()
+        m = re.search(r'var\s+randLink\s*=\s*["\']([a-f0-9]{32})["\']', html)
+        if not m:
+            m = re.search(r'\?([a-f0-9]{32})', html)
+        if not m:
+            raise RuntimeError("randLink tidak ditemukan")
+        return html, m.group(1)
         
     async def get_rand_link(self) -> str:
         html = (await self.fetch_main_page()).text()
@@ -36,11 +45,67 @@ class BadanpanganService(BaseService):
             raise RuntimeError("randLink tidak ditemukan")
         return m.group(1)
     
-    async def fetch_js(self, rand: str, sip: int, dip: int, tip: int, ind: str) -> str:
-        """Fetch data dari micro_draw endpoint."""
-        url = f"{BASE_URL}/micro_draw.php?rand={rand}&sip={sip}&dip={dip}&tip={tip}&ind={ind}"
-        return (await self.client_get(url)).text()
+    # async def fetch_js(self, rand: str, sip: int, dip: int, tip: int, ind: str) -> str:
+    #     """Fetch data dari micro_draw endpoint."""
+    #     url = f"{BASE_URL}/micro_draw.php?rand={rand}&sip={sip}&dip={dip}&tip={tip}&ind={ind}"
+    #     return (await self.client_get(url)).text()
     
+    async def fetch_js(self, rand: str, sip: int, dip: int, tip: int, ind: str) -> dict:
+        """
+        Fetch data dari micro_draw endpoint.
+        Return dict dengan text, status_code, url.
+        """
+        url = f"{BASE_URL}/micro_draw.php?rand={rand}&sip={sip}&dip={dip}&tip={tip}&ind={ind}"
+
+        result = {
+            "url": url,
+            "parameters": {
+                "rand": rand,
+                "sip": sip,
+                "dip": dip,
+                "tip": tip,
+                "ind": ind
+            },
+            "success": False,
+            "text": "",
+            "status_code": None,
+            "error": None,
+            "response_time_ms": None
+        }
+
+        try:
+            start_time = asyncio.get_event_loop().time()
+            # Use client.get() directly instead of client_get() since URL already contains parameters
+            resp = await self.client.get(url, timeout=120.0)
+            end_time = asyncio.get_event_loop().time()
+
+            result["status_code"] = resp.status_code
+            result["response_time_ms"] = round((end_time - start_time) * 1000, 2)
+
+            resp.raise_for_status()
+            resp.encoding = resp.charset_encoding or 'utf-8'
+            result["text"] = resp.text
+            result["success"] = True
+
+        except Exception as e:
+            result["error"] = str(e)
+
+        return result
+
+    async def fetch_with_fresh_rand(self, sip: int, dip: int, tip: int, ind: str) -> dict:
+        """
+        Fetch data dengan fresh rand link untuk setiap request.
+        Return dict dengan hasil fetch dan rand yang dipakai.
+        """
+        # Ambil fresh rand link
+        html, rand = await self.fetch_main_page()
+        logger.info(f"Extracted rand: {rand[:8]}... from main page")
+
+        # Fetch dengan fresh rand
+        result = await self.fetch_js(rand, sip, dip, tip, ind)
+        result["rand_link"] = rand  # Include rand yang dipakai
+        return result
+        
     # Master method
 
     @logger.catch(onerror=lambda e: exec('raise e'))
@@ -62,27 +127,40 @@ class BadanpanganService(BaseService):
                 logger.error(f"[{year}] tidak ada data → skip")
                 continue
 
-            # Refresh rand link sebelum tiap request
+            # Fetch data dengan fresh rand link
             try:
-                rand = await self.get_rand_link()
-            except Exception as e:
-                logger.error(f"[{year}] ERROR refresh rand: {e}")
-                continue
-
-            try:
-                js_text = await self.fetch_js(rand, int(kab_kode), 3, year, ind)
+                logger.info(f"[{year}] Fetching with sip={kab_kode}, dip=3, tip={year}, ind={ind}")
+                result = await self.fetch_with_fresh_rand(int(kab_kode), 3, year, ind)
                 await sleep(0.5)
             except Exception as e:
                 logger.error(f"[{year}] ERROR fetch: {e}")
                 continue
 
+            # Cek hasil fetch
+            if not result["success"]:
+                logger.warning(f"[{year}] Server reject → skip (error: {result.get('error')})")
+                continue
+
+            js_text = result["text"]
+
+            # Debug: show first 200 chars of response for troubleshooting
+            logger.info(f"[{year}] Response preview: {js_text[:200]}")
+
             if "Key Invalid" in js_text or (len(js_text) < 300 and "alert" in js_text.lower()):
-                logger.warning(f"[{year}] Server reject → skip")
+                logger.warning(f"[{year}] Server reject → skip (rand: {result.get('rand_link', 'unknown')[:8]}...)")
+                logger.warning(f"[{year}] Full response: {js_text}")
                 continue
 
             if "coreData" not in js_text:
-                logger.warning(f"[{year}] coreData tidak ada → skip")
+                logger.warning(f"[{year}] coreData tidak ada → skip (rand: {result.get('rand_link', 'unknown')[:8]}...)")
+                logger.warning(f"[{year}] Full response: {js_text}")
                 continue
+
+            # Debug output
+            logger.info(f"[{year}] URL: {result.get('url')}")
+            logger.info(f"[{year}] Response length: {len(js_text)}")
+            logger.info(f"[{year}] Response time: {result.get('response_time_ms', 0):.2f}ms")
+            logger.info(f"[{year}] coreData present: {'coreData' in js_text}")
 
             # coreNames dari blob
             njson = decompress_njson(js_text)
@@ -103,7 +181,7 @@ class BadanpanganService(BaseService):
 
     @logger.catch(onerror=lambda e: exec('raise e'))
     async def fetch_statistik_dareah_badan_pangan_origin(self, province: str, years: list[int]):
-        html = (await self.fetch_main_page()).text()
+        html, _ = await self.fetch_main_page()
         data_years = parse_data_years(html, years)
         kab_codes = {k: yrs for k, yrs in data_years.items() if len(k) == 6}
         logger.info(f"[+] Total kabupaten/kota dengan data: {len(kab_codes)}")
