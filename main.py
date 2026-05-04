@@ -1,4 +1,5 @@
 from source.phips_service import PhipsService, LevelLocation
+from source.badanpangan_service import BadanpanganService
 from source.mcp_prompts import register_mcp_prompts
 
 from fastmcp import FastMCP
@@ -7,6 +8,8 @@ from asyncio import sleep, gather
 
 
 PHIPS_SERVICE = PhipsService()
+BADANPANGAN_SERVICE = BadanpanganService()
+
 
 mcp = FastMCP(name="MCP Comodity Prices")
 register_mcp_prompts(mcp)
@@ -108,12 +111,25 @@ async def get_comodity_prices(
         "results": results
     }
 
+@mcp.tool
+async def get_statistik_wilayah_ketahanan_pangan(location_keyword: str, year: int):
+    """
+    This tool useful to get statistic information for each Desa/Village about food resilience
+    Args:
+        location_keyword: The name of region to search (e.g., "jakarta", "jawa timur").
+        years: Year about timeframe the statistic, usually the data for this year is not yet available.
+    """
+    await BADANPANGAN_SERVICE.ensure_started()
+
+    return await BADANPANGAN_SERVICE.fetch_statistik_dareah_badan_pangan_origin(location_keyword, [year])
+
 if __name__ == "__main__":
     from asyncio import run, ensure_future
+    from os import getenv
     async def main():
         try:
             ensure_future(schedule_task())
-            await mcp.run_async("http", host="0.0.0.0", port=5200)
+            await mcp.run_async("http", host="0.0.0.0", port=int(getenv("PORT") | "5200"))
         except BaseException as e:
             logger.error(e)
         finally:

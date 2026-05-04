@@ -34,23 +34,23 @@ INDICATOR_FIELDS = [
 ]
 
 FIELD_LABELS = {
-    "x_comp18": "Komposit_FSVA",
-    "x_1_p_ncpr": "Rasio_NCPR",
-    "x_2_p_poverty": "Persen_Miskin",
-    "x_3_p_p_food": "Persen_RT_Pangan65",
-    "x_4_p_electric": "Persen_RT_TanpaListrik",
-    "x_5_p_water": "Persen_RT_TanpaAirBersih",
+    "x_comp18": "Komposit",
+    "x_1_p_ncpr": "Rasio",
+    "x_2_p_poverty": "Persentase Miskin",
+    "x_3_p_p_food": "Persentase RT Pangan",
+    "x_4_p_electric": "Persentase RT Tanpa Listrik",
+    "x_5_p_water": "Persentase RT Tanpa Air Bersih",
     "x_6_p_life": "AHH",
-    "x_7_p_tenkes": "Rasio_Tenkes",
-    "x_8_p_fschool": "RLS_Perempuan",
-    "x_9_p_stunting": "Persen_Stunting",
-    "x_61_p_morb": "Persen_Morbiditas",
-    "x_2_p_lahan": "Rasio_LahanPertanian",
-    "x_3_p_sarana": "Rasio_SaranaPangan",
-    "x_4_p_desil_1": "Rasio_Desil1",
-    "x_5_p_jalan": "Desa_TanpaAkses",
+    "x_7_p_tenkes": "Rasio Tenkes",
+    "x_8_p_fschool": "RLS Perempuan",
+    "x_9_p_stunting": "Persentase Stunting",
+    "x_61_p_morb": "Persentase Morbiditas",
+    "x_2_p_lahan": "Rasio Lahan Pertanian",
+    "x_3_p_sarana": "Rasio Sarana Pangan",
+    "x_4_p_desil_1": "Rasio Desil1",
+    "x_5_p_jalan": "Desa Tanpa Akses",
     "x_ikp": "IKP",
-    "x_ikp_rank": "IKP_Ranking",
+    "x_ikp_rank": "IKP Ranking",
 }
 
 
@@ -177,7 +177,7 @@ def parse_core_i_blocks(js_text: str) -> dict[str, dict[str, dict]]:
     return result
 
 @logger.catch(onerror=lambda e: exec('raise e'))
-def build_rows(core_data: dict, core_names: dict, year: int, indicator_fields: list[str], field_labels: dict[str, str]) -> list[dict]:
+def build_rows(core_data: dict, core_names: dict, year: int) -> list[dict]:
     """
     Build rows dari coreData untuk satu tahun.
     Return list of dict dengan struktur yang rapi.

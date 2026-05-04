@@ -56,8 +56,8 @@ async def test_badanpangan_sevice():
     svc = BadanpanganService()
     await svc.start()
     try:
-        result = await svc.fetch_statistik_dareah_badan_pangan_origin("Aceh", [2024])
-        dump(result, open("badanpangan_sample.json", "w"), indent=2)
+        result = await svc.fetch_statistik_dareah_badan_pangan_origin("bandung", [2024])
+        dump(result, open("xbadanpangan_sample.json", "w"), indent=2)
     except BaseException as e:
         raise e
     finally:
