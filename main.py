@@ -11,7 +11,7 @@ PHIPS_SERVICE = PhipsService()
 BADANPANGAN_SERVICE = BadanpanganService()
 
 
-mcp = FastMCP(name="MCP Comodity Prices")
+mcp = FastMCP(name="MCP Comodity Prices", version="1.0.6")
 register_mcp_prompts(mcp)
 
 async def schedule_task():
@@ -62,7 +62,7 @@ async def list_location(keyword: str | None = None, level: LevelLocation = "all"
 @mcp.tool
 async def get_comodity_prices(
     comodity_keyword: str,
-    price_type_id: int,
+    price_type_id: int = 2,
     start_date: str | None = None,
     end_date: str | None = None,
     location_keyword: str | None = None,

@@ -1,9 +1,10 @@
-from source.base_service import BaseService, dict_factory, Lock
+from source.base_service import BaseService, dict_factory
 from typing import Any, Literal
 from time import time
 from datetime import datetime
 from loguru import logger
-from asyncio import gather
+from asyncio import gather, sleep
+from httpx import ConnectError
 
 
 def epoch() -> int:
@@ -27,21 +28,24 @@ class PhipsService(BaseService):
                     "Chrome/128.0.0.0 Safari/537.36"
                 ),
                 "X-Requested-With": "XMLHttpRequest",
-                # "XSRF-TOKEN": "CfDJ8G-QVzELtjBMsytlF7fKM_MF2HCgQMxm1GQPmvZc0wtztRtCHdE1Bxu-z7b4PPLkUZuZTWYNfDqrUXLywR73JShUDcabuH9mk6UqHgLTTwx2f56bX-hbRVd3OWDUpjYSEN0gDoBJBS25gP-EmR0YQ4Q",
                 "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
                 "sec-ch-ua-mobile": "?0",
                 "sec-ch-ua-platform": '"Windows"',
             },
-            # {
-            #     "WSAntiforgeryCookie": "CfDJ8G-QVzELtjBMsytlF7fKM_PV3BodAWihARWeB9Donop4Qt5A4H7uBEzjX_oczu1sKq6EXdEIU0BR5TAWBA2QzxJANKG5QzVPy76Q2cXJcdLBhIc_hOBUEd4utRG7zSHIGsBBRjvSEWys8KGAZzPS2CU",
-            #     "TS01a661ae": "0199782b6f39c2b0a2268000ab5a3486e8642e8e8efdd181688510679c0795972c2376f0f3f25884a40d5b7714dfdf69c319025cec605eab1e0ef14018fac413bbadcfd4e9",
-            #     "TS0dddebd2027": "08f7caa0deab2000b82cec9eef7e7769b0245a3be3e3dc1c66659bf45a0bf88b03cf230a25dfd15108ace41e51113000a2d7b79ab158cd4d807379c126ebc4c9eb410beebe8d61b31c719e6b3540e5672b2365ab573057e6c400b28813ee3dc0",
-            #     "TS01441bdb": "0199782b6fd297ada34fe8f7882388430a94109ae0abf01ea4ced549cfb278fd93eb4e94457b3c9b2ff0fa46482e4071de75732882",
-            # }
         )
 
         self.base_url = "https://www.bi.go.id/hargapangan/WebSite/TabelHarga"
 
+    async def client_get(self, url, params = {}):
+        err = None
+        for i in range(10):
+            try:
+                return await super().client_get(url, params)
+            except ConnectError as e:
+                logger.info(f"trying hit in {i+1}-10, error: {e}")
+                await sleep(0.2)
+                err = e
+        raise err
 
     @logger.catch(onerror=lambda e: exec('raise e'))
     async def list_price_type_origin(self) -> list[dict[str, Any]]:

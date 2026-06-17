@@ -20,7 +20,7 @@ spec:
         kind: mcp-harga-komoditas-dan-ketahanan-pangan
     spec:
       containers:
-        - image: registry.blackeye.id/crawler/api/mcp-harga-komoditas-dan-ketahanan-pangan:1.0.0
+        - image: registry.blackeye.id/crawler/api/mcp-harga-komoditas-dan-ketahanan-pangan:1.0.6
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
